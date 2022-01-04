@@ -1,9 +1,9 @@
 /***
 *
 *	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*
+*	This product contains software technology licensed from Id
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc.
 *	All Rights Reserved.
 *
 *   Use, distribution, and modification of this source code and/or resulting
@@ -73,7 +73,7 @@ edict_t *CGameRules :: GetPlayerSpawnSpot( CBasePlayer *pPlayer )
 	pPlayer->pev->angles = VARS(pentSpawnSpot)->angles;
 	pPlayer->pev->punchangle = g_vecZero;
 	pPlayer->pev->fixangle = TRUE;
-	
+
 	return pentSpawnSpot;
 }
 
@@ -85,7 +85,7 @@ BOOL CGameRules::CanHavePlayerItem( CBasePlayer *pPlayer, CBasePlayerItem *pWeap
 	{
 		if ( !CanHaveAmmo( pPlayer, pWeapon->pszAmmo1(), pWeapon->iMaxAmmo1() ) )
 		{
-			// we can't carry anymore ammo for this gun. We can only 
+			// we can't carry anymore ammo for this gun. We can only
 			// have the gun if we aren't already carrying one of this type
 			if ( pPlayer->HasPlayerItem( pWeapon ) )
 			{
@@ -121,7 +121,7 @@ void CGameRules::RefreshSkillData ( void )
 	}
 	else if ( iSkill > 3 )
 	{
-		iSkill = 3; 
+		iSkill = 3;
 	}
 
 	gSkillData.iSkillLevel = iSkill;
@@ -157,12 +157,30 @@ CGameRules *InstallGameRules( void )
 	}
 	else
 	{
+		//++ BulliT
+		if ( CVAR_GET_FLOAT( "mp_teamplay" ) >= LTS )
+		{
+			// lts
+			return new CHalfLifeTeamplay;
+		}
+		else if ( CVAR_GET_FLOAT( "mp_teamplay" ) == LMS )
+		{
+			// lms
+			return new CHalfLifeMultiplay;
+		}
+		else if ( CVAR_GET_FLOAT( "mp_teamplay" ) == ARENA )
+		{
+			// arena
+			return new CHalfLifeMultiplay;
+		}
+		else
+		//-- Martin Webrant
 		if ( CVAR_GET_FLOAT( "mp_teamplay" ) > 0 )
 		{
 			// teamplay
 			return new CHalfLifeTeamplay;
 		}
-		if ((int)gpGlobals->deathmatch == 1)
+		else if ((int)gpGlobals->deathmatch == 1)
 		{
 			// vanilla deathmatch
 			return new CHalfLifeMultiplay;

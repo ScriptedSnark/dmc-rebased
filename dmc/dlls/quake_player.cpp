@@ -1,9 +1,9 @@
 /***
 *
 *	Copyright (c) 1996-2002,, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*
+*	This product contains software technology licensed from Id
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc.
 *	All Rights Reserved.
 *
 *   Use, distribution, and modification of this source code and/or resulting
@@ -29,18 +29,18 @@
 
 extern entvars_t *g_pevLastInflictor;
 extern int gmsgStatusText;
-extern int gmsgStatusValue; 
+extern int gmsgStatusValue;
 extern DLL_GLOBAL Vector		g_vecAttackDir;
 
 /*************************************
-			  STATUS BAR 
+			  STATUS BAR
 /*************************************/
 
 // Initialise the player's status bar
 void CBasePlayer::InitStatusBar()
 {
 	m_flStatusBarDisappearDelay = 0;
-	m_SbarString1[0] = m_SbarString0[0] = 0; 
+	m_SbarString1[0] = m_SbarString0[0] = 0;
 }
 
 void CBasePlayer::UpdateStatusBar()
@@ -65,7 +65,7 @@ void CBasePlayer::UpdateStatusBar()
 			{
 				newSBarState[ SBAR_ID_TARGETNAME ] = ENTINDEX( pEntity->edict() );
 				newSBarState[ SBAR_ID_TARGETTEAM ] = FALSE;
-					
+
 				m_flStatusBarDisappearDelay = gpGlobals->time + 1.0;
 			}
 		}
@@ -128,9 +128,27 @@ int CBasePlayer::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, fl
 		}
 	}
 
+	//++ BulliT
+  	if (g_pGameRules->m_iGameMode >= LMS)
+  	{
+    	if (!g_pGameRules->m_LMS.CanTakeDamage())
+      		return 0;
+  	}
+  	else if (g_pGameRules->m_iGameMode == ARENA)
+  	{
+    	if (!g_pGameRules->m_Arena.CanTakeDamage())
+    		return 0;
+  	}
+	//++ BulliT
+
 	// team play damage avoidance
 	if ( g_pGameRules->PlayerRelationship( this, pAttacker ) == GR_TEAMMATE )
 	{
+		//++ BulliT
+		// LTS you can still hurt yourself
+		if ( g_pGameRules->m_iGameMode == LTS && pAttacker != this )
+			return 0;
+		//-- Martin Webrant
 		// Teamplay 3 you can still hurt yourself
 		if ( CVAR_GET_FLOAT( "mp_teamplay" ) == 3 && pAttacker != this )
 			return 0;
@@ -158,7 +176,7 @@ int CBasePlayer::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, fl
 
 	Vector vecTemp;
 
-	if ( pevAttacker == pevInflictor )	
+	if ( pevAttacker == pevInflictor )
 	{
 		vecTemp = pevAttacker->origin - ( VecBModelOrigin(pev) );
 	}
@@ -175,16 +193,16 @@ int CBasePlayer::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, fl
 	// figure momentum add
 	if ( (pevInflictor) && (pev->movetype == MOVETYPE_WALK) && !( FBitSet (bitsDamageType, DMG_BURN) ) && !( FBitSet (bitsDamageType, DMG_ACID) ) )
 	{
-		
+
 
 		Vector vecPush = (pev->origin - (pevInflictor->absmin + pevInflictor->absmax) * 0.5).Normalize();
 		// Set kickback for smaller weapons
 		// Read: only if it's not yourself doing the damage
-		if ( (flDamage < 60) && pAttacker->IsPlayer() && (pAttacker != this) ) 
+		if ( (flDamage < 60) && pAttacker->IsPlayer() && (pAttacker != this) )
 			pev->velocity = pev->velocity + vecPush * flDamage * 11;
-		else  
+		else
 		{
-			// Otherwise, these rules apply to rockets and grenades                        
+			// Otherwise, these rules apply to rockets and grenades
 			// for blast velocity
 			if ( pAttacker == this )
 			{
@@ -194,11 +212,11 @@ int CBasePlayer::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, fl
 			else
 				pev->velocity = pev->velocity + vecPush * flDamage * 8;
 		}
-		
+
 		// Rocket Jump modifiers
 		int iRocketJumpModifier = (int)CVAR_GET_FLOAT("rj");
 
-		if ( (iRocketJumpModifier > 1) && (pAttacker == this) && m_iQuakeWeapon == ( IT_ROCKET_LAUNCHER | IT_GRENADE_LAUNCHER ) ) 
+		if ( (iRocketJumpModifier > 1) && (pAttacker == this) && m_iQuakeWeapon == ( IT_ROCKET_LAUNCHER | IT_GRENADE_LAUNCHER ) )
 			pev->velocity = pev->velocity + vecPush * flDamage * iRocketJumpModifier;
 	}
 
@@ -231,13 +249,13 @@ int CBasePlayer::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, fl
 	// react to the damage
 	m_bitsDamageType |= bitsDamageType; // Save this so we can report it to the client
 	m_bitsHUDDamage = -1;  // make sure the damage bits get resent
-	
+
 	if ( pev->health <= 0 )
 	{
 		g_pevLastInflictor = pevInflictor;
 
 		Killed( pevAttacker, GIB_NORMAL );
-	
+
 		g_pevLastInflictor = NULL;
 		return 0;
 	}

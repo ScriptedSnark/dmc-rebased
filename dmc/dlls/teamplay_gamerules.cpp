@@ -1,9 +1,9 @@
 /***
 *
 *	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*
+*	This product contains software technology licensed from Id
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc.
 *	All Rights Reserved.
 *
 *   Use, distribution, and modification of this source code and/or resulting
@@ -107,9 +107,23 @@ void CHalfLifeTeamplay :: Think ( void )
 		return;
 	}
 
+	//++ BulliT
+  	if (g_pGameRules->m_iGameMode == LTS)
+    	m_LMS.Think();
+
+  	if (m_iGameMode != CVAR_GET_FLOAT("mp_teamplay"))
+  	{
+    	GoToIntermission();
+    	return;
+  	}
+	//-- Martin Webrant
+
 	float flTimeLimit = CVAR_GET_FLOAT("mp_timelimit") * 60;
-	
-	time_remaining = (int)(flTimeLimit ? ( flTimeLimit - gpGlobals->time ) : 0);
+
+	//++ BulliT
+	//time_remaining = (int)(flTimeLimit ? ( flTimeLimit - gpGlobals->time ) : 0);
+  	time_remaining = (int)(flTimeLimit ? ( flTimeLimit - gpGlobals->time + m_fGameStart) : 0);
+	//-- Martin Webrant
 
 	if ( flTimeLimit != 0 && gpGlobals->time >= flTimeLimit )
 	{
@@ -207,7 +221,7 @@ const char *CHalfLifeTeamplay::SetDefaultPlayerTeam( CBasePlayer *pPlayer )
 	if ( pPlayer->m_szTeamName[0] == '\0' || !IsValidTeam( pPlayer->m_szTeamName ) || defaultteam.value )
 	{
 		const char *pTeamName = NULL;
-		
+
 		if ( defaultteam.value )
 		{
 			pTeamName = team_names[0];
@@ -311,6 +325,9 @@ void CHalfLifeTeamplay::ChangePlayerTeam( CBasePlayer *pPlayer, const char *pTea
 //=========================================================
 void CHalfLifeTeamplay::ClientUserInfoChanged( CBasePlayer *pPlayer, char *infobuffer )
 {
+	//++ BulliT
+  	CHalfLifeMultiplay::ClientUserInfoChanged(pPlayer, infobuffer);
+	//-- Martin Webrant
 	char text[1024];
 
 	// prevent skin/color/model changes
@@ -345,7 +362,7 @@ void CHalfLifeTeamplay::ClientUserInfoChanged( CBasePlayer *pPlayer, char *infob
 	sprintf( text, "* %s has changed to team \'%s\'\n", STRING(pPlayer->pev->netname), mdls );
 	UTIL_SayTextAll( text, pPlayer );
 
-	UTIL_LogPrintf( "\"%s<%i><%s><%s>\" joined team \"%s\"\n", 
+	UTIL_LogPrintf( "\"%s<%i><%s><%s>\" joined team \"%s\"\n",
 		STRING(pPlayer->pev->netname),
 		GETPLAYERUSERID( pPlayer->edict() ),
 		GETPLAYERAUTHID( pPlayer->edict() ),
@@ -360,13 +377,13 @@ void CHalfLifeTeamplay::ClientUserInfoChanged( CBasePlayer *pPlayer, char *infob
 extern int gmsgDeathMsg;
 
 //=========================================================
-// Deathnotice. 
+// Deathnotice.
 //=========================================================
 void CHalfLifeTeamplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, entvars_t *pevInflictor )
 {
 	if ( m_DisableDeathMessages )
 		return;
-	
+
 	if ( pVictim && pKiller && pKiller->flags & FL_CLIENT )
 	{
 		CBasePlayer *pk = (CBasePlayer*) CBaseEntity::Instance( pKiller );
@@ -494,7 +511,7 @@ int CHalfLifeTeamplay::GetTeamIndex( const char *pTeamName )
 				return tm;
 		}
 	}
-	
+
 	return -1;	// No match
 }
 
@@ -508,7 +525,7 @@ const char *CHalfLifeTeamplay::GetIndexedTeamName( int teamIndex )
 }
 
 
-BOOL CHalfLifeTeamplay::IsValidTeam( const char *pTeamName ) 
+BOOL CHalfLifeTeamplay::IsValidTeam( const char *pTeamName )
 {
 	if ( !m_teamLimit )	// Any team is valid if the teamlist isn't set
 		return TRUE;
@@ -524,7 +541,7 @@ const char *CHalfLifeTeamplay::TeamWithFewestPlayers( void )
 	char *pTeamName = NULL;
 
 	memset( teamCount, 0, MAX_TEAMS * sizeof(int) );
-	
+
 	// loop through all clients, count number of players on each team
 	for ( i = 1; i <= gpGlobals->maxClients; i++ )
 	{
@@ -596,9 +613,9 @@ void CHalfLifeTeamplay::RecountTeams( void )
 			const char *pTeamName = plr->TeamID();
 			// try add to existing team
 			int tm = GetTeamIndex( pTeamName );
-			
+
 			if ( tm < 0 ) // no team match found
-			{ 
+			{
 				if ( !m_teamLimit )
 				{
 					// add to new team

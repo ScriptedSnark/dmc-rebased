@@ -1,9 +1,9 @@
 /***
 *
 *	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*
+*	This product contains software technology licensed from Id
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc.
 *	All Rights Reserved.
 *
 *   Use, distribution, and modification of this source code and/or resulting
@@ -16,6 +16,16 @@
 // GameRules
 //=========================================================
 
+//++ BulliT
+#if !defined(_GAMERULES_H_)
+#define _GAMERULES_H_
+
+#define NORMAL 3
+#define ARENA 4
+#define LMS   5
+#define LTS   6
+//-- Martin Webrant
+
 //#include "weapons.h"
 //#include "items.h"
 class CBasePlayerItem;
@@ -25,15 +35,15 @@ class CBasePlayerAmmo;
 
 // weapon respawning return codes
 enum
-{	
+{
 	GR_NONE = 0,
-	
+
 	GR_WEAPON_RESPAWN_YES,
 	GR_WEAPON_RESPAWN_NO,
-	
+
 	GR_AMMO_RESPAWN_YES,
 	GR_AMMO_RESPAWN_NO,
-	
+
 	GR_ITEM_RESPAWN_YES,
 	GR_ITEM_RESPAWN_NO,
 
@@ -56,6 +66,10 @@ enum
 	GR_NEUTRAL,
 };
 
+#include "agglobal.h"
+#include "agarena.h"
+#include "aglms.h"
+
 class CGameRules
 {
 public:
@@ -73,7 +87,7 @@ public:
 	virtual BOOL IsTeamplay( void ) { return FALSE; };// is this deathmatch game being played with team rules?
 	virtual BOOL IsCoOp( void ) = 0;// is this a coop game?
 	virtual const char *GetGameDescription( void ) { return "DMC"; }  // this is the game name that gets seen in the server browser
-	
+
 // Client connection/disconnection
 	virtual BOOL ClientConnected( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[ 128 ] ) = 0;// a client just connected to the server (player hasn't spawned yet)
 	virtual void InitHUD( CBasePlayer *pl ) = 0;		// the client dll is ready for updating
@@ -136,7 +150,7 @@ public:
 // What happens to a dead player's weapons
 	virtual int DeadPlayerWeapons( CBasePlayer *pPlayer ) = 0;// what do I do with a player's weapons when he's killed?
 
-// What happens to a dead player's ammo	
+// What happens to a dead player's ammo
 	virtual int DeadPlayerAmmo( CBasePlayer *pPlayer ) = 0;// Do I drop ammo when the player dies? How much?
 
 // Teamplay stuff
@@ -157,13 +171,21 @@ public:
 
 	// Immediately end a multiplayer game
 	virtual void EndMultiplayerGame( void ) {}
+
+	//++ BulliT
+  	public:
+  	AgArena             m_Arena;
+  	AgLMS               m_LMS;
+  	int                 m_iGameMode;
+  	float               m_fGameStart;
+	//-- Martin Webrant
 };
 
 extern CGameRules *InstallGameRules( void );
 
 
 //=========================================================
-// CHalfLifeRules - rules for the single player Half-Life 
+// CHalfLifeRules - rules for the single player Half-Life
 // game.
 //=========================================================
 class CHalfLifeRules : public CGameRules
@@ -178,7 +200,7 @@ public:
 
 	virtual BOOL FShouldSwitchWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pWeapon );
 	virtual BOOL GetNextBestWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pCurrentWeapon );
-	
+
 // Functions to verify the single/multiplayer status of a game
 	virtual BOOL IsMultiplayer( void );
 	virtual BOOL IsDeathmatch( void );
@@ -191,7 +213,7 @@ public:
 
 // Client damage rules
 	virtual float FlPlayerFallDamage( CBasePlayer *pPlayer );
-	
+
 // Client spawn/respawn control
 	virtual void PlayerSpawn( CBasePlayer *pPlayer );
 	virtual void PlayerThink( CBasePlayer *pPlayer );
@@ -237,13 +259,13 @@ public:
 // What happens to a dead player's weapons
 	virtual int DeadPlayerWeapons( CBasePlayer *pPlayer );
 
-// What happens to a dead player's ammo	
+// What happens to a dead player's ammo
 	virtual int DeadPlayerAmmo( CBasePlayer *pPlayer );
 
 // Monsters
 	virtual BOOL FAllowMonsters( void );
 
-// Teamplay stuff	
+// Teamplay stuff
 	virtual const char *GetTeamID( CBaseEntity *pEntity ) {return "";};
 	virtual int PlayerRelationship( CBaseEntity *pPlayer, CBaseEntity *pTarget );
 };
@@ -337,10 +359,10 @@ public:
 // What happens to a dead player's weapons
 	virtual int DeadPlayerWeapons( CBasePlayer *pPlayer );
 
-// What happens to a dead player's ammo	
+// What happens to a dead player's ammo
 	virtual int DeadPlayerAmmo( CBasePlayer *pPlayer );
 
-// Teamplay stuff	
+// Teamplay stuff
 	virtual const char *GetTeamID( CBaseEntity *pEntity ) {return "";}
 	virtual int PlayerRelationship( CBaseEntity *pPlayer, CBaseEntity *pTarget );
 
@@ -352,7 +374,7 @@ public:
 
 	// Immediately end a multiplayer game
 	virtual void EndMultiplayerGame( void ) { GoToIntermission(); }
-	
+
 	CVoiceGameMgr	m_VoiceGameMgr;
 
 protected:
@@ -368,3 +390,7 @@ protected:
 };
 
 extern DLL_GLOBAL CGameRules*	g_pGameRules;
+
+//++ BulliT
+#endif //_GAMERULES_H_
+//-- Martin Webrant

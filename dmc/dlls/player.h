@@ -1,9 +1,9 @@
 /***
 *
 *	Copyright (c) 1999, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*
+*	This product contains software technology licensed from Id
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc.
 *	All Rights Reserved.
 *
 *   Use, distribution, and modification of this source code and/or resulting
@@ -95,25 +95,25 @@ public:
 	int					random_seed;    // See that is shared between client & server for shared weapons code
 
 	int					m_iPlayerSound;// the index of the sound list slot reserved for this player
-	int					m_iTargetVolume;// ideal sound volume. 
+	int					m_iTargetVolume;// ideal sound volume.
 	int					m_iWeaponVolume;// how loud the player's weapon is right now.
 	int					m_iExtraSoundTypes;// additional classification for this weapon's sound
 	int					m_iWeaponFlash;// brightness of the weapon flash
 	float				m_flStopExtraSoundTime;
-	
+
 	float				m_flFlashLightTime;	// Time until next battery draw/Recharge
 	int					m_iFlashBattery;		// Flashlight Battery Draw
 
 	int					m_afButtonLast;
 	int					m_afButtonPressed;
 	int					m_afButtonReleased;
-	
+
 	edict_t			   *m_pentSndLast;			// last sound entity to modify player room type
 	float				m_flSndRoomtype;		// last roomtype set by sound entity
 	float				m_flSndRange;			// dist from player to sound entity
 
 	float				m_flFallVelocity;
-	
+
 	int					m_rgItems[MAX_ITEMS];
 	int					m_fKnownItem;		// True when a new item needs to be added
 	int					m_fNewAmmo;			// True when a new item has been added
@@ -147,7 +147,7 @@ public:
 	int					m_idrowndmg;			// track drowning damage taken
 	int					m_idrownrestored;		// track drowning damage restored
 
-	int					m_bitsHUDDamage;		// Damage bits for the current fame. These get sent to 
+	int					m_bitsHUDDamage;		// Damage bits for the current fame. These get sent to
 												// the hude via the DAMAGE message
 	BOOL				m_fInitHUD;				// True when deferred HUD restart msg needs to be sent
 	BOOL				m_fGameHUDInitialized;
@@ -157,7 +157,7 @@ public:
 	EHANDLE				m_pTank;				// the tank which the player is currently controlling,  NULL if no tank
 	float				m_fDeadTime;			// the time at which the player died  (used in PlayerDeathThink())
 
-	BOOL			m_fNoPlayerSound;	// a debugging feature. Player makes no sound if this is true. 
+	BOOL			m_fNoPlayerSound;	// a debugging feature. Player makes no sound if this is true.
 	BOOL			m_fLongJump; // does this player have the longjump module?
 
 	float       m_tSneaking;
@@ -168,7 +168,7 @@ public:
 	int			m_iClientHideHUD;
 	int			m_iFOV;			// field of view
 	int			m_iClientFOV;	// client's known FOV
-	// usable player items 
+	// usable player items
 	CBasePlayerItem	*m_rgpPlayerItems[MAX_ITEM_TYPES];
 	CBasePlayerItem *m_pActiveItem;
 	CBasePlayerItem *m_pClientActiveItem;  // client version of the active item
@@ -205,7 +205,10 @@ public:
 	virtual void StartSneaking( void ) { m_tSneaking = gpGlobals->time - 1; }
 	virtual void StopSneaking( void ) { m_tSneaking = gpGlobals->time + 30; }
 	virtual BOOL IsSneaking( void ) { return m_tSneaking <= gpGlobals->time; }
-	virtual BOOL IsAlive( void ) { return (pev->deadflag == DEAD_NO) && pev->health > 0; }
+	//++ BulliT
+	//	virtual BOOL IsAlive( void ) { return (pev->deadflag == DEAD_NO) && pev->health > 0; }
+	virtual BOOL IsAlive( void ) { return (pev->deadflag == DEAD_NO) && pev->health > 0 && !IsSpectator(); }
+	//++ BulliT
 	virtual BOOL ShouldFadeOnDeath( void ) { return FALSE; }
 	virtual	BOOL IsPlayer( void ) { return TRUE; }			// Spectators should return FALSE for this, they aren't "players" as far as game logic is concerned
 
@@ -221,7 +224,7 @@ public:
 
 	// JOHN:  sends custom messages if player HUD data has changed  (eg health, ammo)
 	virtual void UpdateClientData( void );
-	
+
 	static	TYPEDESCRIPTION m_playerSaveData[];
 
 	// Player is moved across the transition by other means
@@ -231,7 +234,7 @@ public:
 	BOOL			FlashlightIsOn( void );
 	void			FlashlightTurnOn( void );
 	void			FlashlightTurnOff( void );
-	
+
 	void DeathSound ( void );
 
 	int Classify ( void );
@@ -396,8 +399,72 @@ public:
 	unsigned short m_usGrenade;
 	unsigned short m_usLightning;
 	unsigned short m_usSpike;
-	unsigned short m_usSuperSpike;	
+	unsigned short m_usSuperSpike;
+//++ BulliT
+protected:
+  bool          m_bIngame;           //Player was in the game when match started.
+public:
+  bool          m_bReady;	          //True if player is ready to enter lts/lms
+  void          Init();   //Init the player
+  const char*   GetName();  //Get name
+  bool          IsIngame(); //Returns true if allowed to enter the game. If false go specmode.
+  void          SetIngame(bool bIngame); //Set to true to allow player in the game.
+  bool          RespawnMatch();                      //Respawn and removes players old enties.
+  void          ResetScore();
+  bool          IsSpectator();       //Returns true if spectating.
+  bool          IsProxy();			//Returns true if proxy server client.
 
+  void          RemoveAllItemsNoClientMessage();
+
+  void Spectate_Init();
+  void Spectate_Spectate();
+  void Spectate_Start();
+  void Spectate_Stop(bool bIntermediateSpawn = false);
+  void Spectate_UpdatePosition();
+  bool Spectate_Think();
+  bool Spectate_Follow(EHANDLE& pPlayer,int iMode);
+  bool Spectate_HLTV();
+//-- Martin Webrant
+};
+
+//++ BulliT
+inline const char* CBasePlayer::GetName()
+{
+  return pev->netname ? STRING(pev->netname)[0] ? STRING(pev->netname) : "" : "";
+};
+
+inline bool CBasePlayer::IsIngame()
+{
+  return m_bIngame;
+};
+
+inline void CBasePlayer::SetIngame(bool bIngame)
+{
+  m_bIngame = bIngame;
+};
+
+inline bool CBasePlayer::IsSpectator()
+{
+  return pev->iuser1 > 0 || IsProxy();
+};
+
+inline bool CBasePlayer::IsProxy()
+{
+  if (pev->flags & FL_PROXY)
+	  return true;
+  return false;
+};
+
+// Spectator Movement modes (stored in pev->iuser1, so the physics code can get at them)
+#define OBS_NONE				0
+#define OBS_CHASE_LOCKED		1
+#define OBS_CHASE_FREE			2
+#define OBS_ROAMING				3
+#define OBS_IN_EYE				4
+#define OBS_MAP_FREE			5
+#define OBS_MAP_CHASE			6
+
+//-- Martin Webrant
 
 #ifdef THREEWAVE
 	int		m_bHasFlag;
@@ -430,7 +497,7 @@ public:
 	void Service_Grapple ( void );
 
 #endif
-	
+
 
 //#ifdef THREEWAVE
 

@@ -1,9 +1,9 @@
 /***
 *
 *	Copyright (c) 1999, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*
+*	This product contains software technology licensed from Id
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc.
 *	All Rights Reserved.
 *
 *   Use, distribution, and modification of this source code and/or resulting
@@ -12,7 +12,7 @@
 *   without written permission from Valve LLC.
 *
 ****/
-// Robin, 4-22-98: Moved set_suicide_frame() here from player.cpp to allow us to 
+// Robin, 4-22-98: Moved set_suicide_frame() here from player.cpp to allow us to
 //				   have one without a hardcoded player.mdl in tf_client.cpp
 
 /*
@@ -41,6 +41,11 @@
 #include <ctype.h> // isspace,isprint
 #endif
 
+//++ BulliT
+extern int gmsgTeamInfo;
+extern cvar_t timeleft, timelimit;
+//-- Martin Webrant
+
 extern DLL_GLOBAL ULONG		g_ulModelIndexPlayer;
 extern DLL_GLOBAL BOOL		g_fGameOver;
 extern DLL_GLOBAL int		g_iSkillLevel;
@@ -63,7 +68,7 @@ extern unsigned short g_sExplosion;
 extern unsigned short g_usPowerUp;
 
 #ifdef THREEWAVE
-extern unsigned short g_usHook;	
+extern unsigned short g_usHook;
 extern unsigned short g_usCable;
 extern unsigned short g_usCarried;
 extern unsigned short g_usFlagSpawn;
@@ -76,7 +81,7 @@ void LinkUserMessages( void );
  * ROBIN: Moved here from player.cpp, to allow multiple player models
  */
 void set_suicide_frame(entvars_t* pev)
-{       
+{
 	if (!FStrEq(STRING(pev->model), "models/player.mdl"))
 		return; // allready gibbed
 
@@ -96,7 +101,7 @@ called when a player connects to a server
 ============
 */
 BOOL ClientConnect( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[ 128 ]  )
-{	
+{
 	return g_pGameRules->ClientConnected( pEntity, pszName, pszAddress, szRejectReason );
 
 // a client connecting during an intermission can cause problems
@@ -203,6 +208,10 @@ void ClientPutInServer( edict_t *pEntity )
 
 	pPlayer->m_bHadFirstSpawn = false;
 
+	//++ BulliT
+  	pPlayer->Init();
+	//-- Martin Webrant
+
 	// Allocate a CBasePlayer for pev, and call spawn
 	pPlayer->Spawn();
 
@@ -302,11 +311,11 @@ void Host_Say( edict_t *pEntity, int teamonly )
 	// so check it, or it will infinite loop
 
 	client = NULL;
-	while ( ((client = (CBasePlayer*)UTIL_FindEntityByClassname( client, "player" )) != NULL) && (!FNullEnt(client->edict())) ) 
+	while ( ((client = (CBasePlayer*)UTIL_FindEntityByClassname( client, "player" )) != NULL) && (!FNullEnt(client->edict())) )
 	{
 		if ( !client->pev )
 			continue;
-		
+
 		if ( client->edict() == pEntity )
 			continue;
 
@@ -314,7 +323,7 @@ void Host_Say( edict_t *pEntity, int teamonly )
 			continue;
 
 		// can the receiver hear the sender? or has he muted him?
-#ifdef THREEWAVE 		
+#ifdef THREEWAVE
 		if ( ((CThreeWave *)g_pGameRules)->m_VoiceGameMgr.PlayerHasBlockedPlayer( client, player ) )
 #else
 		if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_VoiceGameMgr.PlayerHasBlockedPlayer( client, player ) )
@@ -348,8 +357,8 @@ void Host_Say( edict_t *pEntity, int teamonly )
 
 #if !defined( THREEWAVE )
 
-	UTIL_LogPrintf( "\"%s<%i><%s><%i>\" %s \"%s\"\n", 
-		STRING( pEntity->v.netname ), 
+	UTIL_LogPrintf( "\"%s<%i><%s><%i>\" %s \"%s\"\n",
+		STRING( pEntity->v.netname ),
 		GETPLAYERUSERID( pEntity ),
 		GETPLAYERAUTHID( pEntity ),
 		GETPLAYERUSERID( pEntity ),
@@ -357,8 +366,8 @@ void Host_Say( edict_t *pEntity, int teamonly )
 		p );
 #else
 
-	UTIL_LogPrintf( "\"%s<%i><%s><%s>\" %s \"%s\"\n", 
-		STRING( pEntity->v.netname ), 
+	UTIL_LogPrintf( "\"%s<%i><%s><%s>\" %s \"%s\"\n",
+		STRING( pEntity->v.netname ),
 		GETPLAYERUSERID( pEntity ),
 		GETPLAYERAUTHID( pEntity ),
 		GetTeamName( pEntity->v.team ),
@@ -397,7 +406,7 @@ void ClientCommand( edict_t *pEntity )
 	}
 	else if ( FStrEq(pcmd, "fullupdate" ) )
 	{
-		GetClassPtr((CBasePlayer *)pev)->ForceClientDllUpdate(); 
+		GetClassPtr((CBasePlayer *)pev)->ForceClientDllUpdate();
 	}
 	else if ( FStrEq(pcmd, "give" ) )
 	{
@@ -413,6 +422,10 @@ void ClientCommand( edict_t *pEntity )
 
 		if ( pPlayer->m_bHadFirstSpawn == false && g_bHaveMOTD )
 		{
+			//++ BulliT
+      			if (!g_pGameRules->FPlayerCanRespawn(pPlayer))
+        			return;
+			//-- Martin Webrant
 			pPlayer->m_bHadFirstSpawn = true;
 #ifndef THREEWAVE
 			pPlayer->Spawn();
@@ -420,7 +433,7 @@ void ClientCommand( edict_t *pEntity )
 
 		}
 
-		
+
 
 	}
 
@@ -437,12 +450,38 @@ void ClientCommand( edict_t *pEntity )
 	else if ( FStrEq(pcmd, "spectate" ) )
 	{
 		CBasePlayer * pPlayer = GetClassPtr((CBasePlayer *)pev);
-
+		//++ BulliT
+    	/*
 		if ( pPlayer->pev->flags & FL_PROXY )
 		{
 			edict_t *pentSpawnSpot = g_pGameRules->GetPlayerSpawnSpot( pPlayer );
 			pPlayer->StartObserver( pev->origin, VARS(pentSpawnSpot)->angles);
 		}
+		*/
+		if (pPlayer->IsProxy())
+		{
+			pPlayer->Spectate_HLTV();
+		}
+		//Dont spectate if player is in game in arena.
+    	if (pPlayer->IsIngame() && g_pGameRules->m_iGameMode >= ARENA)
+      		return;
+
+    	if (2 == CMD_ARGC() && 1 == atoi(CMD_ARGV(1)))
+    	{
+      		pPlayer->Spectate_Start();
+      		pPlayer->ResetScore();
+    	}
+    	else if (2 == CMD_ARGC() && 0 == atoi(CMD_ARGV(1)))
+    	{
+      		pPlayer->Spectate_Stop();
+    	}
+    	else
+    	{
+      		pPlayer->Spectate_Spectate();
+      		pPlayer->ResetScore();
+    	}
+    	return;
+		//-- Martin Webrant
 	}
 	else if (FStrEq(pcmd, "lastinv" ))
 	{
@@ -464,6 +503,106 @@ void ClientCommand( edict_t *pEntity )
 		if ( pPlayer->IsObserver() )
 			pPlayer->Observer_FindNextPlayer();
 	}
+	//++ BulliT
+  else if (FStrEq(CMD_ARGV(0), "ready" ))
+  {
+    CBasePlayer * pPlayer = GetClassPtr((CBasePlayer *)pev);
+    if (g_pGameRules->m_iGameMode >= LMS)
+    {
+      ClientPrint( pPlayer->pev, HUD_PRINTCONSOLE, "Changed mode to READY.\n");
+      if (!pPlayer->m_bReady)
+      {
+        pPlayer->m_bReady = true;
+        //Send new team name
+        if (g_pGameRules->IsTeamplay())
+        {
+          MESSAGE_BEGIN( MSG_ALL, gmsgTeamInfo );
+            WRITE_BYTE( pPlayer->entindex() );
+            WRITE_STRING( pPlayer->TeamID() );
+          MESSAGE_END();
+        }
+      }
+      return;
+    }
+    else if (g_pGameRules->m_iGameMode == ARENA)
+    {
+      g_pGameRules->m_Arena.Ready(pPlayer);
+      return;
+    }
+  }
+  else if (FStrEq(CMD_ARGV(0), "notready" ))
+  {
+    CBasePlayer * pPlayer = GetClassPtr((CBasePlayer *)pev);
+    if (g_pGameRules->m_iGameMode >= LMS)
+    {
+      ClientPrint( pPlayer->pev, HUD_PRINTCONSOLE, "Changed mode to NOT READY.\n");
+      if (pPlayer->m_bReady)
+      {
+        pPlayer->m_bReady = false;
+        pPlayer->SetIngame(false); //Cant respawn
+        if(!pPlayer->IsSpectator())
+        {
+          pPlayer->Spectate_Start();
+          pPlayer->Observer_SetMode(OBS_IN_EYE);
+        }
+        else
+        {
+          //Send new team name (blank for specs)
+          if (g_pGameRules->IsTeamplay())
+          {
+            MESSAGE_BEGIN( MSG_ALL, gmsgTeamInfo );
+              WRITE_BYTE( pPlayer->entindex() );
+              WRITE_STRING( pPlayer->TeamID() );
+            MESSAGE_END();
+          }
+        }
+      }
+      return;
+    }
+    else if (g_pGameRules->m_iGameMode == ARENA)
+    {
+      g_pGameRules->m_Arena.NotReady(pPlayer);
+      return;
+    }
+  }
+  else if (FStrEq(CMD_ARGV(0), "timeleft" ))
+  {
+    if (timelimit.value && timeleft.value)
+    {
+      long lTime = timeleft.value;
+      char szTime[128];
+      if (86400 < lTime)
+      {
+        //More than one day. Print days, hour, minutes and seconds
+        ldiv_t d1 = ldiv(lTime, 86400);
+        ldiv_t d2 = ldiv(d1.rem, 3600);
+        ldiv_t d3 = ldiv(d2.rem, 60);
+        sprintf(szTime,"timeleft = %ldd %ldh %02ldm %02lds",d1.quot,d2.quot,d3.quot,d3.rem);
+      }
+      else if (3600 < lTime)
+      {
+        //More than one hour. Print hour, minutes and seconds
+        ldiv_t d1 = ldiv(lTime, 3600);
+        ldiv_t d2 = ldiv(d1.rem, 60);
+        sprintf(szTime,"timeleft = %ldh %02ldm %02lds",d1.quot,d2.quot,d2.rem);
+      }
+      else if (60 < lTime)
+      {
+        //More than one minute. Print minutes and seconds.
+        ldiv_t d = ldiv(lTime, 60);
+        sprintf(szTime,"timeleft = %ld:%02ld",d.quot,d.rem);
+      }
+      else
+      {
+        //Less than a minute left. Print seconds.
+        sprintf(szTime,"timeleft = %ld",lTime);
+      }
+      CBasePlayer * pPlayer = GetClassPtr((CBasePlayer *)pev);
+      AgConsole(szTime, pPlayer);
+    }
+    return;
+  }
+//-- Martin Webrant
 	else
 	{
 		// tell the user they entered an unknown command
@@ -499,19 +638,19 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 
 #if !defined( THREEWAVE )
 
-		UTIL_LogPrintf( "\"%s<%i><%s><%i>\" changed name to \"%s\"\n", 
-			STRING( pEntity->v.netname ), 
-			GETPLAYERUSERID( pEntity ), 
+		UTIL_LogPrintf( "\"%s<%i><%s><%i>\" changed name to \"%s\"\n",
+			STRING( pEntity->v.netname ),
+			GETPLAYERUSERID( pEntity ),
 			GETPLAYERAUTHID( pEntity ),
-			GETPLAYERUSERID( pEntity ), 
+			GETPLAYERUSERID( pEntity ),
 			g_engfuncs.pfnInfoKeyValue( infobuffer, "name" ) );
 #else
 
-		UTIL_LogPrintf( "\"%s<%i><%s><%s>\" changed name to \"%s\"\n", 
-			STRING( pEntity->v.netname ), 
-			GETPLAYERUSERID( pEntity ), 
+		UTIL_LogPrintf( "\"%s<%i><%s><%s>\" changed name to \"%s\"\n",
+			STRING( pEntity->v.netname ),
+			GETPLAYERUSERID( pEntity ),
 			GETPLAYERAUTHID( pEntity ),
-			GetTeamName( pEntity->v.team ), 
+			GetTeamName( pEntity->v.team ),
 			g_engfuncs.pfnInfoKeyValue( infobuffer, "name" ) );
 #endif
 	}
@@ -532,7 +671,7 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 	}
 
 	g_pGameRules->ClientUserInfoChanged( GetClassPtr((CBasePlayer *)&pEntity->v), infobuffer );
-	
+
 }
 
 static int g_serveractive = 0;
@@ -540,7 +679,7 @@ static int g_serveractive = 0;
 void ServerDeactivate( void )
 {
 	// It's possible that the engine will call this function more times than is necessary
-	//  Therefore, only run it one time for each call to ServerActivate 
+	//  Therefore, only run it one time for each call to ServerActivate
 	if ( g_serveractive != 1 )
 	{
 		return;
@@ -565,7 +704,7 @@ void ServerActivate( edict_t *pEdictList, int edictCount, int clientMax )
 	{
 		if ( pEdictList[i].free )
 			continue;
-		
+
 		// Clients aren't necessarily initialized until ClientPutInServer()
 		if ( i < clientMax || !pEdictList[i].pvPrivateData )
 			continue;
@@ -657,12 +796,12 @@ void ClientPrecache( void )
 {
 	// setup precaches always needed
 	PRECACHE_SOUND("player/sprayer.wav");			// spray paint sound for PreAlpha
-	
+
 	// PRECACHE_SOUND("player/pl_jumpland2.wav");		// UNDONE: play 2x step sound
-	
-	PRECACHE_SOUND("player/pl_fallpain2.wav");		
-	PRECACHE_SOUND("player/pl_fallpain3.wav");		
-	
+
+	PRECACHE_SOUND("player/pl_fallpain2.wav");
+	PRECACHE_SOUND("player/pl_fallpain3.wav");
+
 	PRECACHE_SOUND("player/pl_step1.wav");		// walk on concrete
 	PRECACHE_SOUND("player/pl_step2.wav");
 	PRECACHE_SOUND("player/pl_step3.wav");
@@ -735,7 +874,7 @@ void ClientPrecache( void )
 	PRECACHE_SOUND( SOUND_FLASHLIGHT_OFF );
 
 // player gib sounds
-	PRECACHE_SOUND("common/bodysplat.wav");		               
+	PRECACHE_SOUND("common/bodysplat.wav");
 
 // player pain sounds
 	PRECACHE_SOUND("player/pain1.wav");
@@ -755,7 +894,7 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("player/death5.wav");
 
 	PRECACHE_SOUND("player/h2odeath.wav");
-	
+
 	PRECACHE_MODEL("models/player.mdl");
 
 	// hud sounds
@@ -1069,7 +1208,7 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 		if ( ( hostflags & 1 ) && ( ent->v.owner == host ) )
 			return 0;
 	}
-	
+
 	if ( host->v.groupinfo )
 	{
 		UTIL_SetGroupTrace( host->v.groupinfo, GROUP_OP_AND );
@@ -1098,14 +1237,14 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 	//  delta from it.
 	state->number	  = e;
 	state->entityType = ENTITY_NORMAL;
-	
+
 	// Flag custom entities.
 	if ( ent->v.flags & FL_CUSTOMENTITY )
 	{
 		state->entityType = ENTITY_BEAM;
 	}
 
-	// 
+	//
 	// Copy state data
 	//
 
@@ -1124,7 +1263,7 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 	state->starttime = ent->v.starttime;
 
 	state->modelindex = ent->v.modelindex;
-		
+
 	state->frame      = ent->v.frame;
 	state->skin       = ent->v.skin;
 	state->effects    = ent->v.effects;
@@ -1133,8 +1272,8 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 	//  make sure that we interpolate it's position on the client if it moves
 	if ( !player &&
 		 ent->v.animtime &&
-		 ent->v.velocity[ 0 ] == 0 && 
-		 ent->v.velocity[ 1 ] == 0 && 
+		 ent->v.velocity[ 0 ] == 0 &&
+		 ent->v.velocity[ 1 ] == 0 &&
 		 ent->v.velocity[ 2 ] == 0 )
 	{
 		state->eflags |= EFLAG_SLERP;
@@ -1159,7 +1298,7 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 	}
 
 	state->rendermode    = ent->v.rendermode;
-	state->renderamt     = ent->v.renderamt; 
+	state->renderamt     = ent->v.renderamt;
 	state->renderfx      = ent->v.renderfx;
 	state->rendercolor.r = ent->v.rendercolor[0];
 	state->rendercolor.g = ent->v.rendercolor[1];
@@ -1175,11 +1314,11 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 	if ( ent->v.owner )
 	{
 		int owner = ENTINDEX( ent->v.owner );
-		
+
 		// Only care if owned by a player
 		if ( owner >= 1 && owner <= gpGlobals->maxClients )
 		{
-			state->owner = owner;	
+			state->owner = owner;
 		}
 	}
 	// Special stuff for players only
@@ -1296,7 +1435,7 @@ void Entity_FieldInit( struct delta_s *pFields )
 ==================
 Entity_Encode
 
-Callback for sending entity_state_t info over network. 
+Callback for sending entity_state_t info over network.
 FIXME:  Move to script
 ==================
 */
@@ -1369,7 +1508,7 @@ void Player_FieldInit( struct delta_s *pFields )
 ==================
 Player_Encode
 
-Callback for sending entity_state_t for players info over network. 
+Callback for sending entity_state_t for players info over network.
 ==================
 */
 void Player_Encode( struct delta_s *pFields, const unsigned char *from, const unsigned char *to )
@@ -1451,7 +1590,7 @@ void Custom_Entity_FieldInit( struct delta_s *pFields )
 ==================
 Custom_Encode
 
-Callback for sending entity_state_t info ( for custom entities ) over network. 
+Callback for sending entity_state_t info ( for custom entities ) over network.
 FIXME:  Move to script
 ==================
 */
@@ -1471,7 +1610,7 @@ void Custom_Encode( struct delta_s *pFields, const unsigned char *from, const un
 	t = (entity_state_t *)to;
 
 	beamType = t->rendermode & 0x0f;
-		
+
 	if ( beamType != BEAM_POINTS && beamType != BEAM_ENTPOINT )
 	{
 		DELTA_UNSETBYINDEX( pFields, custom_entity_field_alias[ CUSTOMFIELD_ORIGIN0 ].field );
@@ -1521,7 +1660,7 @@ int GetWeaponData( struct edict_s *player, struct weapon_data_s *info )
 	entvars_t *pev = &player->v;
 	CBasePlayer *pl = ( CBasePlayer *) CBasePlayer::Instance( pev );
 	CBasePlayerWeapon *gun;
-	
+
 	ItemInfo II;
 
 	memset( info, 0, 32 * sizeof( weapon_data_t ) );
@@ -1549,7 +1688,7 @@ int GetWeaponData( struct edict_s *player, struct weapon_data_s *info )
 					if ( II.iId >= 0 && II.iId < 32 )
 					{
 						item = &info[ II.iId ];
-						
+
 						item->m_iId						= II.iId;
 						item->m_iClip					= gun->m_iClip;
 
@@ -1806,7 +1945,7 @@ AllowLagCompensation
  The game .dll should return 1 if lag compensation should be allowed ( could also just set
   the sv_unlag cvar.
  Most games right now should return 0, until client-side weapon prediction code is written
-  and tested for them ( note you can predict weapons, but not do lag compensation, too, 
+  and tested for them ( note you can predict weapons, but not do lag compensation, too,
   if you want.
 ================================
 */
