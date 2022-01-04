@@ -7,10 +7,12 @@ OS:=$(shell uname)
 
 DMCDLL_SRC_DIR=$(SOURCE_DIR)/dmc/dlls
 PM_SRC_DIR=$(SOURCE_DIR)/dmc/pm_shared
+MINISTL_SRC_DIR=$(SOURCE_DIR)/dmc/ministl
 
 DMCDLL_OBJ_DIR=$(BUILD_OBJ_DIR)/dmcdll
 PM_OBJ_DIR=$(DMCDLL_OBJ_DIR)/pm_shared
 GAME_SHARED_OBJ_DIR=$(DMCDLL_OBJ_DIR)/game_shared
+MINISTL_OBJ_DIR=$(DMCDLL_OBJ_DIR)/ministl
 
 DEBUG_CFLAGS=
 ifeq "$(CFG)" "debug"
@@ -20,7 +22,7 @@ endif
 #full optimization
 CFLAGS=$(BASE_CFLAGS) $(ARCH_CFLAGS) $(DEBUG_CFLAGS)
 
-DMCDLL_INCLUDEDIRS=-I$(ENGINE_SRC_DIR) -I$(COMMON_SRC_DIR) -I$(PM_SRC_DIR) -I$(GAME_SHARED_SRC_DIR) -I$(PUBLIC_SRC_DIR)
+DMCDLL_INCLUDEDIRS=-I$(ENGINE_SRC_DIR) -I$(COMMON_SRC_DIR) -I$(PM_SRC_DIR) -I$(GAME_SHARED_SRC_DIR) -I$(MINISTL_SRC_DIR) -I$(PUBLIC_SRC_DIR)
 PM_INCLUDEDIRS=-I$(COMMON_SRC_DIR) -I$(PUBLIC_SRC_DIR)
 GAME_SHARED_INCLUDEDIRS=-I$(DMCDLL_SRC_DIR) -I$(ENGINE_SRC_DIR) -I$(COMMON_SRC_DIR) -I$(PUBLIC_SRC_DIR)
 
@@ -29,16 +31,17 @@ LDFLAGS=
 DO_DMCDLL_CC=$(CC) $(DMCDLL_INCLUDEDIRS) $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
 DO_PM_CC=$(CC) $(PM_INCLUDEDIRS) $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
 DO_GAME_SHARED_CC=$(CC) $(GAME_SHARED_INCLUDEDIRS) $(CFLAGS) $(SHLIBFLAGS) -o $@ -c $<
+DO_MINISTL_CC=$(CC) $(CFLAGS) -o $@ -c $<
 
 #############################################################################
 
 DMCDLL_OBJS = \
 	$(DMCDLL_OBJ_DIR)/animating.o \
 	$(DMCDLL_OBJ_DIR)/animation.o \
-    $(DMCDLL_OBJ_DIR)/bmodels.o \
-    $(DMCDLL_OBJ_DIR)/buttons.o \
-    $(DMCDLL_OBJ_DIR)/cbase.o \
-    $(DMCDLL_OBJ_DIR)/client.o \
+	$(DMCDLL_OBJ_DIR)/bmodels.o \
+	$(DMCDLL_OBJ_DIR)/buttons.o \
+	$(DMCDLL_OBJ_DIR)/cbase.o \
+	$(DMCDLL_OBJ_DIR)/client.o \
 	$(DMCDLL_OBJ_DIR)/combat.o \
 	$(DMCDLL_OBJ_DIR)/doors.o \
 	$(DMCDLL_OBJ_DIR)/effects.o \
@@ -78,7 +81,11 @@ DMCDLL_OBJS = \
 	$(DMCDLL_OBJ_DIR)/triggers.o \
 	$(DMCDLL_OBJ_DIR)/util.o \
 	$(DMCDLL_OBJ_DIR)/weapons.o \
-	$(DMCDLL_OBJ_DIR)/world.o
+	$(DMCDLL_OBJ_DIR)/world.o \
+	$(DMCDLL_OBJ_DIR)/agarena.o \
+	$(DMCDLL_OBJ_DIR)/agglobal.o \
+	$(DMCDLL_OBJ_DIR)/aglms.o \
+	$(DMCDLL_OBJ_DIR)/agspectator.o
 
 PM_OBJS = \
 	$(PM_OBJ_DIR)/pm_shared.o \
@@ -88,6 +95,9 @@ PM_OBJS = \
 GAME_SHARED_OBJS = \
 	$(GAME_SHARED_OBJ_DIR)/voice_gamemgr.o
 
+MINISTL_OBJS = \
+	$(MINISTL_OBJ_DIR)/algo.o
+
 all: dirs dmc.$(SHLIBEXT)
 
 dirs:
@@ -95,8 +105,9 @@ dirs:
 	-mkdir $(DMCDLL_OBJ_DIR)
 	-mkdir $(PM_OBJ_DIR)
 	-mkdir $(GAME_SHARED_OBJ_DIR)
+	-mkdir $(MINISTL_OBJ_DIR)
 
-dmc.$(SHLIBEXT): $(DMCDLL_OBJS) $(PM_OBJS) $(GAME_SHARED_OBJS)
+dmc.$(SHLIBEXT): $(DMCDLL_OBJS) $(PM_OBJS) $(GAME_SHARED_OBJS) $(MINISTL_OBJS)
 	$(CLINK) $(SHLIBLDFLAGS) -o $(BUILD_DIR)/$@ $(DMCDLL_OBJS) $(PM_OBJS) $(GAME_SHARED_OBJS) $(LDFLAGS) $(CPP_LIB)
 	#p4 edit ../../game/mod/dlls/$@
 	#cp $(BUILD_DIR)/$@  ../../game/mod/dlls
@@ -111,7 +122,11 @@ $(PM_OBJ_DIR)/%.o : $(PM_SRC_DIR)/%.c
 $(GAME_SHARED_OBJ_DIR)/%.o : $(GAME_SHARED_SRC_DIR)/%.cpp
 	$(DO_GAME_SHARED_CC)
 
+$(MINISTL_OBJ_DIR)/%.o : $(MINISTL_SRC_DIR)/%.cpp
+	$(DO_MINISTL_CC)
+
 clean:
+	-rm -rf $(MINISTL_OBJ_DIR)
 	-rm -rf $(GAME_SHARED_OBJ_DIR)
 	-rm -rf $(PM_OBJ_DIR)
 	-rm -rf $(DMCDLL_OBJ_DIR)
